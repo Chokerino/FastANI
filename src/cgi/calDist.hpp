@@ -1,8 +1,5 @@
-/**
- * @file    core_genome_identity.cpp
- * @ingroup src
- * @author  Chirag Jain <cjain7@gatech.edu>
- */
+#ifndef Pcd_HPP 
+#define Pcd_HPP
 
 #include <iostream>
 #include <ctime>
@@ -11,47 +8,39 @@
 #include <omp.h>
 
 //Own includes
-#include "map/include/map_parameters.hpp"
-#include "map/include/base_types.hpp"
-#include "map/include/parseCmdArgs.hpp"
-#include "map/include/winSketch.hpp"
-#include "map/include/computeMap.hpp"
-#include "map/include/commonFunc.hpp"
-#include "cgi/include/computeCoreIdentity.hpp" 
+#include "../map/include/map_parameters.hpp"
+#include "../map/include/base_types.hpp"
+#include "../map/include/parseCmdArgs.hpp"
+#include "../map/include/winSketch.hpp"
+#include "../map/include/computeMap.hpp"
+#include "../map/include/commonFunc.hpp"
+#include "include/computeCoreIdentity.hpp" 
 
-int main(int argc, char** argv)
+
+namespace dist
 {
-  /*
-   * Make sure env variable MALLOC_ARENA_MAX is unset 
-   * for efficient multi-threaded execution
-   */
+  float getDistance(char** argv)
+  {
+    unsetenv((char *)"MALLOC_ARENA_MAX");
+    using namespace std::placeholders;  // for _1, _2, _3...
 
-  unsetenv((char *)"MALLOC_ARENA_MAX");
-  using namespace std::placeholders;  // for _1, _2, _3...
+    //Parse command line arguements   
+    skch::Parameters parameters;        //sketching and mapping parameters
+    //std::cerr << *argv << " dsdsadasads" << std::endl;
+    skch::parseandSave(5, argv, parameters);
+    std::string fileName = parameters.outFileName;
 
-  //Parse command line arguements   
-  skch::Parameters parameters;        //sketching and mapping parameters
-  
-  skch::parseandSave(argc, argv, parameters);
-  std::string fileName = parameters.outFileName;
+    //To redirect Mashmap's mapping output to null fs, using file name for CGI output
+    parameters.outFileName = "/dev/null";
 
-  //To redirect Mashmap's mapping output to null fs, using file name for CGI output
-  parameters.outFileName = "/dev/null";
+    //Set up for parallel execution
+    omp_set_num_threads( parameters.threads ); 
+    std::vector <skch::Parameters> parameters_split (parameters.threads);
+    cgi::splitReferenceGenomes (parameters, parameters_split);
 
-  //Set up for parallel execution
-  omp_set_num_threads( parameters.threads ); 
-  std::vector <skch::Parameters> parameters_split (parameters.threads);
-  cgi::splitReferenceGenomes (parameters, parameters_split);
-
-  //Final output vector of ANI computation
-  std::vector<cgi::CGI_Results> finalResults;
-
-  //re
-  //std::ofstream error("error.txt");
-  //FILE fp_old = *stderr;  // preserve the original stdout
-  //*stderr = *fopen("/dev/null","w");
-  //std::streambuf *errbuf = std::cerr.rdbuf(error.rdbuf());
-  
+    //Final output vector of ANI computation
+    std::vector<cgi::CGI_Results> finalResults;
+    
 #pragma omp parallel for schedule(static,1)
   for (uint64_t i = 0; i < parameters.threads; i++)
   {
@@ -111,21 +100,42 @@ int main(int argc, char** argv)
     }
   }
 
-  std::cerr << "INFO, skch::main, parallel_for execution finished" << std::endl;
+  //std::cerr << "INFO, skch::main, parallel_for execution finished" << std::endl;
 
   std::unordered_map <std::string, uint64_t> genomeLengths;    // name of genome -> length
   cgi::computeGenomeLengths(parameters, genomeLengths);
   //std :: cerr <<  finalResults << std::endl;
-  //report output in file
-  //cgi::outputCGI (parameters, genomeLengths, finalResults, fileName);
-//
-  ////report output as matrix
-  //if (parameters.matrixOutput)
-  //  cgi::outputPhylip (parameters, genomeLengths, finalResults, fileName);
-  //  
-  cgi::CGI_Results &e = *(finalResults.begin());
 
-  std::cout <<  e.identity ;
-  return e.identity;
+  std::sort(finalResults.rbegin(), finalResults.rend());
+
+    //Report results
+    for(auto &e : finalResults)
+    {
+      std::string qryGenome = parameters.querySequences[e.qryGenomeId];
+      std::string refGenome = parameters.refSequences[e.refGenomeId];
+
+      assert(genomeLengths.find(qryGenome) != genomeLengths.end());
+      assert(genomeLengths.find(refGenome) != genomeLengths.end());
+
+      //uint64_t queryGenomeLength = genomeLengths[qryGenome];
+      //uint64_t refGenomeLength = genomeLengths[refGenome]; 
+      //uint64_t minGenomeLength = std::min(queryGenomeLength, refGenomeLength);
+      //uint64_t sharedLength = e.countSeq * parameters.minReadLength;
+//
+      ////Checking if shared genome is above a certain fraction of genome length
+      //if(sharedLength >= minGenomeLength * parameters.minFraction)
+      //{
+      //  outstrm << qryGenome
+      //    << "\t" << refGenome
+      //    << "\t" << e.identity 
+      //    << "\t" << e.countSeq
+      //    << "\t" << e.totalQueryFragments
+      //    << "\n";
+      //}
+      return e.identity;
+    }
+    return 0;
+  }
 }
 
+#endif

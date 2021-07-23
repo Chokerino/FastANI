@@ -220,7 +220,7 @@ namespace skch
         parameters.percentageIdentity,
         parameters.minReadLength, parameters.referenceSize);
 
-    printCmdOptions(parameters);
+    //printCmdOptions(parameters);
 
     //Check if files are valid
     validateInputFiles(parameters.querySequences, parameters.refSequences);

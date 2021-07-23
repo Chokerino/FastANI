@@ -1,0 +1,11 @@
+INFO [thread 0], skch::main, Count of threads executing parallel_for : 1
+INFO [thread 0], skch::Sketch::build, window size for minimizer sampling  = 24
+INFO [thread 0], skch::Sketch::build, minimizers picked from reference = 386387
+INFO [thread 0], skch::Sketch::index, unique minimizers = 347908
+INFO [thread 0], skch::Sketch::computeFreqHist, Frequency histogram of minimizers = (1, 339607) ... (116, 1)
+INFO [thread 0], skch::Sketch::computeFreqHist, consider all minimizers during lookup.
+INFO [thread 0], skch::main, Time spent sketching the reference : 0.34191 sec
+INFO [thread 0], skch::main, Time spent mapping fragments in query #1 : 1.39714 sec
+INFO [thread 0], skch::main, Time spent post mapping : 0.000291978 sec
+INFO [thread 0], skch::main, ready to exit the loop
+INFO, skch::main, parallel_for execution finished
